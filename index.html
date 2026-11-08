@@ -620,15 +620,48 @@
   .hot-item{display:flex;align-items:center;gap:10px;padding:7px 6px;border-radius:9px;text-decoration:none;color:var(--text);transition:.15s;min-width:0}
   .hot-item:hover{background:var(--surface-2)}
   .hot-rank{flex:0 0 16px;text-align:center;font-size:12.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
-  .hot-item:nth-child(1) .hot-rank{color:#f26d7d}
-  .hot-item:nth-child(2) .hot-rank{color:#f29a4d}
-  .hot-item:nth-child(3) .hot-rank{color:#e8b93c}
+  .hot-row:nth-child(1) .hot-rank{color:#f26d7d}
+  .hot-row:nth-child(2) .hot-rank{color:#f29a4d}
+  .hot-row:nth-child(3) .hot-rank{color:#e8b93c}
   .hot-title{flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hot-hot{flex:0 0 auto;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
   .hot-loading,.hot-error{grid-column:1/-1;padding:26px 12px;text-align:center;color:var(--muted);font-size:13px;line-height:1.9}
   .hot-error a{color:var(--accent);text-decoration:none;font-weight:600}
   .hot-error .btn-ghost{margin-top:10px;height:34px;font-size:12.5px}
   .hot-foot{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted);margin-top:10px;padding-top:9px;border-top:1px solid var(--border)}
+
+  /* ---------- Gemini 分析 ---------- */
+  .c-gem .dot{background:#7aa5f8}
+  .gem-keyrow{display:flex;gap:8px;margin-bottom:6px}
+  .gem-keyrow input{flex:1;min-width:0;height:38px;border:1px solid var(--border);background:var(--surface-2);border-radius:11px;padding:0 12px;font-size:13px;transition:.18s}
+  .gem-keyrow input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-soft)}
+  .gem-keyrow .add-btn{height:38px;padding:0 14px;font-size:13px;flex:0 0 auto}
+  .gem-keyhint{font-size:11.5px;color:var(--muted);margin-bottom:12px}
+  .gem-keyhint a{color:var(--accent);text-decoration:none;font-weight:600}
+  .gem-tabs{width:fit-content;margin-bottom:0}
+  .gem-model{display:flex;align-items:center;gap:9px;margin:2px 0 10px;font-size:12px;color:var(--muted)}
+  .gem-model .hot-tabs button{font-size:11.5px;padding:5px 10px}
+  textarea#gemTopic{width:100%;min-height:84px;resize:vertical;border:1px solid var(--border);background:var(--surface-2);border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.65;transition:.18s;margin-top:10px}
+  textarea#gemTopic:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-soft)}
+  .gem-runrow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px}
+  .gem-runrow .add-btn{height:38px;font-size:13.5px;flex:0 0 auto}
+  .gem-result{display:none;margin-top:12px;border:1px solid var(--border);border-radius:13px;padding:13px 14px;background:var(--surface-2);font-size:13.5px;line-height:1.8;white-space:pre-wrap;word-break:break-word}
+  .gem-result.show{display:block;animation:gemIn .35s ease}
+  .gem-result.loading{color:var(--muted);text-align:center}
+  .gem-result.loading::after{content:"";animation:gemDots 1.2s infinite}
+  .gem-result.error{border-color:rgba(239,106,122,.4);color:var(--danger)}
+  .gem-result b{font-weight:650;color:var(--text)}
+  .gem-result .gh{font-weight:700;margin:.6em 0 .2em;color:var(--accent)}
+  .gem-actions{display:flex;gap:8px;margin-top:10px}
+  .gem-actions .btn-ghost{height:36px;font-size:12.5px;padding:0 14px}
+  .read-ana{width:22px;height:22px;border-radius:7px;font-size:12px;opacity:.7;transition:.15s}
+  .read-ana:hover{background:var(--accent-soft);opacity:1;transform:scale(1.12)}
+  .hot-row{display:flex;align-items:center;gap:2px;min-width:0}
+  .hot-row .hot-item{flex:1}
+  .hot-ana{flex:0 0 auto;width:24px;height:24px;border-radius:7px;font-size:12px;color:var(--muted);opacity:.5;transition:.15s}
+  .hot-ana:hover{background:var(--accent-soft);color:var(--accent);opacity:1;transform:scale(1.12)}
+  @keyframes gemIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes gemDots{0%{content:""}25%{content:"."}50%{content:".."}75%,100%{content:"..."}}
   .muted{color:var(--muted)}
   html[data-theme="dark"]{color-scheme:dark}
 
@@ -1010,6 +1043,41 @@
             <div class="hot-foot">
               <span id="hotMeta">等待加载 · 需联网</span>
               <button class="today-btn" id="hotRefresh" style="margin:0">刷新</button>
+            </div>
+          </div>
+
+          <!-- Gemini 分析 -->
+          <div class="card c-gem">
+            <div class="card-head">
+              <div class="card-title"><i class="dot"></i>✨ Gemini 分析</div>
+              <div class="card-sub">读书 · 热点 · 哲学</div>
+            </div>
+            <div class="gem-keyrow">
+              <input id="gemKey" type="password" placeholder="粘贴 Gemini API Key" autocomplete="off">
+              <button class="add-btn" id="gemKeySave">保存</button>
+            </div>
+            <div class="gem-keyhint">Key 仅保存在本机浏览器 · <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">免费申请 API Key ↗</a></div>
+            <div class="gem-model">
+              <span>模型</span>
+              <div class="hot-tabs" id="gemModelTabs">
+                <button class="on" data-gmodel="gemini-3.8-flash">Flash · 免费</button>
+                <button data-gmodel="gemini-3.1-pro-preview">Pro · 需付费</button>
+              </div>
+            </div>
+            <div class="hot-tabs gem-tabs" id="gemTabs">
+              <button class="on" data-gmode="read">读书小记</button>
+              <button data-gmode="hot">时事热点</button>
+              <button data-gmode="phil">哲学探讨</button>
+            </div>
+            <textarea id="gemTopic" maxlength="1200"></textarea>
+            <div class="gem-runrow">
+              <span class="muted" id="gemHint" style="font-size:11.5px"></span>
+              <button class="add-btn" id="gemRun">✨ 开始分析</button>
+            </div>
+            <div class="gem-result" id="gemResult"></div>
+            <div class="gem-actions" id="gemActions" style="display:none">
+              <button class="btn-ghost" id="gemCopy">📋 复制结果</button>
+              <button class="btn-ghost" id="gemNote">📝 存入便签</button>
             </div>
           </div>
 
@@ -1423,6 +1491,7 @@
       html += '<div class="read-item" data-rid="'+r.id+'">'+
         '<div class="read-head"><span class="read-book">'+esc(r.book || "未命名书目")+'</span>'+
           '<span class="r"><time>'+(d.getMonth()+1)+'/'+d.getDate()+'</time>'+
+          '<button class="read-ana" data-act="rana" title="用 Gemini 解读">✨</button>'+
           '<button class="read-del" data-act="rdel" title="删除">×</button></span></div>'+
         '<p>'+esc(r.text)+'</p>'+
       '</div>';
@@ -1787,11 +1856,14 @@
     var cfg = HOT[hotSource];
     var html = "";
     items.slice(0, 10).forEach(function(it, i){
-      html += '<a class="hot-item" href="'+(it.url || cfg.site)+'" target="_blank" rel="noopener noreferrer">'+
+      html += '<div class="hot-row">'+
+        '<a class="hot-item" href="'+(it.url || cfg.site)+'" target="_blank" rel="noopener noreferrer">'+
         '<span class="hot-rank">'+(i+1)+'</span>'+
         '<span class="hot-title">'+esc(it.title)+'</span>'+
         (it.hot ? '<span class="hot-hot">'+esc(it.hot)+'</span>' : '')+
-      '</a>';
+      '</a>'+
+      '<button class="hot-ana" data-ht="'+esc(it.title)+'" title="用 Gemini 分析这条热点">✨</button>'+
+      '</div>';
     });
     $("hotList").innerHTML = html;
     $("hotMeta").textContent = (cached ? "缓存 · " : "") + fmtClock(at) + " 更新";
@@ -1967,6 +2039,189 @@
       })
       .catch(function(){ syncStatus("连接失败：网络错误"); });
   }
+
+  /* ---------------- Gemini 分析 ---------------- */
+  var GEM_KEY_STORE = "workbench.gemini.key";
+  var GEM_MODEL_STORE = "workbench.gemini.model";
+  var GEM_FREE = "gemini-3.8-flash";
+  var GEM_PRO = "gemini-3.1-pro-preview";
+  var gemMode = "read";
+  var gemLastText = "";
+  var GEM_MODES = {
+    read: {
+      label: "读书小记",
+      hint: "从读书小记点 ✨ 可自动带入",
+      ph: "填入书名和心得，例如：\n《人类简史》\n作者说国家与金钱都是虚构的故事，这个观点让我想到…",
+      build: function(t){
+        return "你是一位深刻又亲切的阅读伙伴。请针对下面这条读书小记写一段解读（300字左右）：\n1）提炼这段心得背后的核心思想\n2）联系现实生活给出一点启发\n3）推荐一个可以延伸思考的方向\n语言温暖有见地，避免泛泛而谈。直接输出正文，不要客套开场白。\n\n读书小记：\n" + t;
+      }
+    },
+    hot: {
+      label: "时事热点",
+      hint: "从热搜列表点 ✨ 可自动带入",
+      ph: "输入一个时事热点或新闻话题…",
+      build: function(t){
+        return "你是一位敏锐客观的评论人。请就下面的时事热点写一段分析（300字左右）：\n1）事件的背景与核心争议\n2）不同立场的观点\n3）值得关注的深层问题\n保持中立、理性、有洞察，不要编造具体数据。直接输出正文，不要开场白。\n\n热点话题：\n" + t;
+      }
+    },
+    phil: {
+      label: "哲学探讨",
+      hint: "适合探讨哲学书籍、概念与思想家",
+      ph: "输入哲学话题、书名或哲学家，例如：尼采的「永恒轮回」、康德的道德律、《苏菲的世界》…",
+      build: function(t){
+        return "你是一位博学的哲学向导。请围绕下面的话题写一段导览（300字左右）：\n1）核心概念梳理\n2）代表性哲学家及其观点（选取最贴合的）\n3）给初学者的一个思考练习或阅读建议\n深入浅出，避免堆砌术语。直接输出正文，不要开场白。\n\n话题：\n" + t;
+      }
+    }
+  };
+  function gemKeyGet(){ return localStorage.getItem(GEM_KEY_STORE) || ""; }
+  function gemModelGet(){
+    var m = localStorage.getItem(GEM_MODEL_STORE);
+    return (m === GEM_PRO) ? GEM_PRO : GEM_FREE;
+  }
+  function setGemModel(m){
+    if(m !== GEM_PRO) m = GEM_FREE;
+    localStorage.setItem(GEM_MODEL_STORE, m);
+    document.querySelectorAll("#gemModelTabs button").forEach(function(b){
+      b.classList.toggle("on", b.getAttribute("data-gmodel") === m);
+    });
+  }
+  function setGemMode(m){
+    if(!GEM_MODES[m]) m = "read";
+    gemMode = m;
+    document.querySelectorAll("#gemTabs button").forEach(function(b){
+      b.classList.toggle("on", b.getAttribute("data-gmode") === m);
+    });
+    $("gemTopic").placeholder = GEM_MODES[m].ph;
+    $("gemHint").textContent = GEM_MODES[m].hint;
+  }
+  function callGemini(model, prompt, key){
+    return fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+      })
+    }).then(function(r){
+      return r.json().then(function(d){
+        if(!r.ok){
+          throw { status: r.status, msg: (d && d.error && d.error.message) || "" };
+        }
+        return d;
+      });
+    }).then(function(d){
+      var text = "";
+      try{
+        text = d.candidates[0].content.parts.map(function(p){ return p.text || ""; }).join("");
+      }catch(e){}
+      if(!text) throw { status: 0 };
+      return text;
+    });
+  }
+  function gemExplain(err, model){
+    var s = err && err.status;
+    var m = (err && err.msg) || "";
+    if((s === 429 || s === 403) && /limit: 0/.test(m)) return "免费层不给 " + (model === GEM_PRO ? "Gemini 3 Pro" : "该模型") + " 配额（limit 0），需在 Google Cloud 绑定结算后才能用；可先切回 Flash";
+    if(s === 429) return "请求太频繁，稍等片刻再试（免费额度每分钟有限制）";
+    if(s === 400 || s === 401) return "API Key 无效，请到 aistudio.google.com 检查";
+    if(s === 404) return "该模型不可用（可能已下线），请切换模型后重试";
+    return "分析失败，请检查网络后重试";
+  }
+  function gemAnalyze(){
+    var topic = $("gemTopic").value.trim();
+    var key = gemKeyGet();
+    var box = $("gemResult");
+    if(!key){
+      box.className = "gem-result show error";
+      box.textContent = "😿 还没有设置 API Key：点上方链接免费申请一个，粘贴到输入框保存即可";
+      $("gemKey").focus();
+      return;
+    }
+    if(!topic){ toast("先写点想分析的内容"); $("gemTopic").focus(); return; }
+    var btn = $("gemRun");
+    var model = gemModelGet();
+    var used = model;
+    var prompt = GEM_MODES[gemMode].build(topic);
+    btn.disabled = true;
+    btn.textContent = "分析中…";
+    box.className = "gem-result show loading";
+    box.textContent = "🐰 Gemini 正在思考";
+    $("gemActions").style.display = "none";
+
+    callGemini(model, prompt, key).catch(function(err){
+      var proEmpty = model === GEM_PRO && err && (err.status === 429 || err.status === 403) && /limit: 0/.test(err.msg || "");
+      if(!proEmpty) throw err;
+      used = GEM_FREE;
+      setGemModel(GEM_FREE);
+      toast("免费 key 不支持 Pro（配额为 0），已自动改用 Flash");
+      return callGemini(GEM_FREE, prompt, key);
+    }).then(function(text){
+      gemLastText = text;
+      var html = esc(text)
+        .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>")
+        .replace(/^#{1,4}\s*(.+)$/gm, '<div class="gh">$1</div>');
+      box.className = "gem-result show";
+      box.innerHTML = html;
+      $("gemActions").style.display = "flex";
+    }).catch(function(err){
+      box.className = "gem-result show error";
+      box.textContent = "😿 " + gemExplain(err, used);
+    }).then(function(){
+      btn.disabled = false;
+      btn.textContent = "✨ 开始分析";
+    });
+  }
+  $("gemKeySave").onclick = function(){
+    var k = $("gemKey").value.trim();
+    if(!k){ toast("请粘贴 API Key"); return; }
+    localStorage.setItem(GEM_KEY_STORE, k);
+    toast("API Key 已保存到本机 🔑");
+  };
+  $("gemTabs").addEventListener("click", function(e){
+    var b = e.target.closest("[data-gmode]");
+    if(b) setGemMode(b.getAttribute("data-gmode"));
+  });
+  $("gemRun").onclick = gemAnalyze;
+  $("gemCopy").onclick = function(){
+    var text = gemLastText;
+    if(!text) return;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ toast("已复制 📋"); }, function(){ toast("复制失败"); });
+    }else{
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try{ document.execCommand("copy"); toast("已复制 📋"); }catch(e){ toast("复制失败"); }
+      document.body.removeChild(ta);
+    }
+  };
+  $("gemNote").onclick = function(){
+    if(!gemLastText) return;
+    var stamp = "✨ Gemini·" + GEM_MODES[gemMode].label + "（" + todayKey().slice(5) + "）\n" + gemLastText;
+    state.notes = state.notes ? state.notes + "\n\n" + stamp : stamp;
+    save(); renderNotes();
+    toast("已存入速记便签", "查看", function(){ setTab("record"); window.scrollTo(0,0); });
+  };
+  $("hotList").addEventListener("click", function(e){
+    var b = e.target.closest(".hot-ana");
+    if(!b) return;
+    e.preventDefault();
+    var title = b.getAttribute("data-ht") || "";
+    setGemMode("hot");
+    $("gemTopic").value = title;
+    gemAnalyze();
+  });
+  $("gemModelTabs").addEventListener("click", function(e){
+    var b = e.target.closest("[data-gmodel]");
+    if(!b) return;
+    var m = b.getAttribute("data-gmodel");
+    setGemModel(m);
+    if(m === GEM_PRO) toast("Pro 需在 Google Cloud 绑定结算；免费 key 会提示配额为 0");
+  });
+  $("gemKey").value = gemKeyGet();
+  setGemMode("read");
+  setGemModel(gemModelGet());
 
   /* ---------------- 标签页 ---------------- */
   function setTab(name){
@@ -2201,6 +2456,22 @@
   }
   $("readAdd").onclick = addReading;
   $("readList").addEventListener("click", function(e){
+    var ana = e.target.closest('[data-act="rana"]');
+    if(ana){
+      var arow = ana.closest(".read-item"), aid = arow.getAttribute("data-rid");
+      for(var j=0;j<state.readings.length;j++){
+        if(state.readings[j].id === aid){
+          var r = state.readings[j];
+          setTab("explore");
+          window.scrollTo(0, 0);
+          setGemMode("read");
+          $("gemTopic").value = "《" + (r.book || "未命名书目") + "》\n" + r.text;
+          gemAnalyze();
+          return;
+        }
+      }
+      return;
+    }
     var b = e.target.closest('[data-act="rdel"]');
     if(!b) return;
     var row = b.closest(".read-item"), id = row.getAttribute("data-rid");
@@ -2393,7 +2664,7 @@
     var cfg = {
       url: $("cfgUrl").value.trim().replace(/\/+$/,""),
       key: $("cfgKey").value.trim(),
-      code: $("cfgCode").value.trim()
+      code: $("cfgCode").value.replace(/\s+/g,"")
     };
     if(!cfg.url || !cfg.key){ toast("请填写完整的 Project URL 和 anon key"); return; }
     if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.url)){ toast("Project URL 格式应为 https://xxxx.supabase.co"); return; }
