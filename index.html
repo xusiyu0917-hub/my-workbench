@@ -1055,9 +1055,8 @@
       <button class="del" id="syncClose" style="opacity:.7" title="关闭">×</button>
     </div>
     <div class="sync-body">
-      <label>App ID<input id="cfgAppId" placeholder="LeanCloud 应用的 AppID"></label>
-      <label>App Key<input id="cfgAppKey" placeholder="LeanCloud 应用的 AppKey（勿用 Master Key）"></label>
-      <label>Server URL<input id="cfgServer" placeholder="REST API 服务器地址，控制台「应用凭证」里复制"></label>
+      <label>Project URL<input id="cfgUrl" placeholder="Supabase 项目地址，形如 https://xxxx.supabase.co"></label>
+      <label>anon key<input id="cfgKey" placeholder="Supabase 的 anon public key（Settings → API 里复制）"></label>
       <label>同步码<input id="cfgCode" placeholder="手机和电脑填写完全相同的同步码（≥6 位）"></label>
       <div class="sync-status" id="syncStatus">未连接</div>
       <div class="sync-actions">
@@ -1073,7 +1072,7 @@
 <input type="file" id="fileInput" accept="application/json" style="display:none">
 <input type="file" id="kfFile" accept="video/*" style="display:none">
 
-<script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.13.2/dist/av-min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   "use strict";
@@ -1873,9 +1872,9 @@
     lastPct = p;
   }
 
-  /* ---------------- 云端同步（LeanCloud） ---------------- */
+  /* ---------------- 云端同步（Supabase） ---------------- */
   var SYNC_CFG_KEY = "workbench.sync";
-  var sync = { ready:false, objId:null, sub:null, pushTimer:null };
+  var sync = { ready:false, client:null, channel:null, pushTimer:null };
   function getSyncCfg(){
     try{ return JSON.parse(localStorage.getItem(SYNC_CFG_KEY)) || null; }catch(e){ return null; }
   }
@@ -1889,15 +1888,25 @@
     delete c.hot; // 热搜是缓存，不上传
     return c;
   }
+  function syncErr(err){
+    var m = err && err.message ? err.message : "";
+    if(/failed to fetch|network|fetch/i.test(m)) return "无法连接到云端（检查 Project URL 或网络）";
+    return m || "网络错误";
+  }
   function pushNow(){
-    if(!sync.ready || !sync.objId || !window.AV) return;
-    var doc = AV.Object.createWithoutData("Workbench", sync.objId);
-    doc.set("data", stripForCloud());
-    doc.save().then(function(){
-      syncStatus("已连接 · 已同步 " + fmtClock(Date.now()));
-    }).catch(function(err){
-      syncStatus("同步失败：" + (err && err.message ? err.message : "网络错误"));
-    });
+    if(!sync.ready || !sync.client) return;
+    var cfg = getSyncCfg();
+    if(!cfg) return;
+    sync.client.from("workbench")
+      .upsert({ code:cfg.code, data:stripForCloud(), updated_at:new Date().toISOString() }, { onConflict:"code" })
+      .then(function(res){
+        if(res && res.error){
+          syncStatus("同步失败：" + syncErr(res.error));
+        }else{
+          syncStatus("已连接 · 已同步 " + fmtClock(Date.now()));
+        }
+      })
+      .catch(function(){ syncStatus("同步失败：网络错误"); });
   }
   function syncPush(){
     if(!sync.ready) return;
@@ -1916,50 +1925,47 @@
     toast("已从云端同步最新数据 ☁️");
   }
   function subscribeLive(code){
-    if(!window.AV) return;
+    if(!sync.client) return;
     try{
-      var q = new AV.Query("Workbench");
-      q.equalTo("code", code);
-      q.subscribe().then(function(sub){
-        sync.sub = sub;
-        sub.on("update", function(obj){ applyRemote(obj.get("data")); });
-      }).catch(function(){ /* LiveQuery 未开启时降级为「保存时推送 + 打开时拉取」 */ });
-    }catch(e){}
+      sync.channel = sync.client
+        .channel("wb-" + code)
+        .on("postgres_changes",
+            { event:"*", schema:"public", table:"workbench", filter:"code=eq." + code },
+            function(payload){
+              var row = payload && payload.new;
+              if(row && row.data) applyRemote(row.data);
+            })
+        .subscribe();
+    }catch(e){ /* Realtime 未开启时降级为「保存时推送 + 打开时拉取」 */ }
   }
   function connectCloud(cfg, silent){
-    if(!window.AV){ syncStatus("同步组件加载失败，请检查网络后刷新页面"); return; }
-    try{ AV.init({ appId:cfg.appId, appKey:cfg.appKey, serverURL:cfg.server }); }catch(e){}
+    if(!window.supabase){ syncStatus("同步组件加载失败，请检查网络后刷新页面"); return; }
+    try{
+      sync.client = window.supabase.createClient(cfg.url, cfg.key);
+    }catch(e){
+      syncStatus("连接失败：配置格式有误，请检查 Project URL");
+      return;
+    }
     syncStatus("正在连接…");
-    var q = new AV.Query("Workbench");
-    q.equalTo("code", cfg.code);
-    q.first().then(function(obj){
-      if(obj){
-        sync.objId = obj.id;
+    sync.client.from("workbench").select("data").eq("code", cfg.code).maybeSingle()
+      .then(function(res){
+        if(res.error){
+          syncStatus("连接失败：" + syncErr(res.error) + "（请确认已在 Supabase 建好 workbench 表）");
+          return;
+        }
         sync.ready = true;
-        var remote = obj.get("data");
-        if(remote && (remote._updatedAt || 0) > (state._updatedAt || 0)) applyRemote(remote);
-        else pushNow();
+        var remote = res.data && res.data.data;
+        if(remote && (remote._updatedAt || 0) > (state._updatedAt || 0)){
+          applyRemote(remote);
+          syncStatus("已连接 · 同步中");
+        }else{
+          pushNow();
+          syncStatus(remote ? "已连接 · 同步中" : "已连接 · 已创建云端数据");
+        }
         subscribeLive(cfg.code);
-        syncStatus("已连接 · 同步中");
         if(!silent) toast("云端同步已开启 ☁️");
-      }else{
-        var Wb = AV.Object.extend("Workbench");
-        var doc = new Wb();
-        doc.set("code", cfg.code);
-        doc.set("data", stripForCloud());
-        doc.save().then(function(o){
-          sync.objId = o.id;
-          sync.ready = true;
-          subscribeLive(cfg.code);
-          syncStatus("已连接 · 已创建云端数据");
-          if(!silent) toast("已在云端创建同步数据 ☁️");
-        }).catch(function(err){
-          syncStatus("创建失败：" + (err && err.message ? err.message : "网络错误"));
-        });
-      }
-    }).catch(function(err){
-      syncStatus("连接失败：" + (err && err.message ? err.message : "网络错误"));
-    });
+      })
+      .catch(function(){ syncStatus("连接失败：网络错误"); });
   }
 
   /* ---------------- 标签页 ---------------- */
@@ -2373,9 +2379,8 @@
   $("syncBtn").onclick = function(){
     var cfg = getSyncCfg();
     if(cfg){
-      $("cfgAppId").value = cfg.appId || "";
-      $("cfgAppKey").value = cfg.appKey || "";
-      $("cfgServer").value = cfg.server || "";
+      $("cfgUrl").value = cfg.url || "";
+      $("cfgKey").value = cfg.key || "";
       $("cfgCode").value = cfg.code || "";
     }
     $("syncMask").style.display = "flex";
@@ -2386,20 +2391,21 @@
   });
   $("syncConnect").onclick = function(){
     var cfg = {
-      appId: $("cfgAppId").value.trim(),
-      appKey: $("cfgAppKey").value.trim(),
-      server: $("cfgServer").value.trim(),
+      url: $("cfgUrl").value.trim().replace(/\/+$/,""),
+      key: $("cfgKey").value.trim(),
       code: $("cfgCode").value.trim()
     };
-    if(!cfg.appId || !cfg.appKey || !cfg.server){ toast("请填写完整的 AppID / AppKey / Server URL"); return; }
+    if(!cfg.url || !cfg.key){ toast("请填写完整的 Project URL 和 anon key"); return; }
+    if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.url)){ toast("Project URL 格式应为 https://xxxx.supabase.co"); return; }
     if(cfg.code.length < 6){ toast("同步码至少 6 位，建议设置得复杂一些"); return; }
     setSyncCfg(cfg);
     connectCloud(cfg, false);
   };
   $("syncDisconnect").onclick = function(){
     setSyncCfg(null);
-    sync.ready = false; sync.objId = null;
-    if(sync.sub){ try{ sync.sub.unsubscribe(); }catch(e){} sync.sub = null; }
+    sync.ready = false;
+    if(sync.channel){ try{ sync.client.removeChannel(sync.channel); }catch(e){} sync.channel = null; }
+    sync.client = null;
     clearTimeout(sync.pushTimer);
     syncStatus("已断开（本机数据保留）");
     toast("已断开云端同步，本机数据保留");
@@ -2553,7 +2559,7 @@
 
   // 启动时自动重连云端同步
   var bootCfg = getSyncCfg();
-  if(bootCfg && bootCfg.appId && bootCfg.code){
+  if(bootCfg && bootCfg.url && bootCfg.key && bootCfg.code){
     connectCloud(bootCfg, true);
   }
 })();
