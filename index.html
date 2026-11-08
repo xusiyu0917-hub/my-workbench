@@ -146,6 +146,7 @@
   .c-ai .dot{background:#a06ef0}
   .c-kf .dot{background:#ff8fab}
   .c-sleep .dot{background:#f7b267}
+  .c-med .dot{background:#43c59e}
   .card-sub{font-size:12.5px;color:var(--muted)}
 
   /* ---------- hero ---------- */
@@ -571,6 +572,14 @@
   .sleep-btn.bed.on{background:linear-gradient(135deg,#a88cf0,#e293d4);border-color:transparent;color:#fff;box-shadow:0 6px 14px rgba(168,140,240,.35)}
   .sleep-tip{margin-top:9px;font-size:11px;color:var(--muted);text-align:center}
 
+  /* ---------- 用药打卡 ---------- */
+  .sl-cell.am.on{border-color:#43c59e;background:linear-gradient(135deg,#cdf3e3,#d5eefb);box-shadow:0 4px 12px rgba(67,197,158,.28)}
+  .sl-cell.pm.on{border-color:#7ea2f2;background:linear-gradient(135deg,#dae6fd,#e4dcfc);box-shadow:0 4px 12px rgba(126,162,242,.28)}
+  html[data-theme="dark"] .sl-cell.am.on{background:linear-gradient(135deg,rgba(67,197,158,.32),rgba(96,180,220,.26))}
+  html[data-theme="dark"] .sl-cell.pm.on{background:linear-gradient(135deg,rgba(126,162,242,.32),rgba(168,140,240,.26))}
+  .sleep-btn.am.on{background:linear-gradient(135deg,#43c59e,#5fc4e0);border-color:transparent;color:#fff;box-shadow:0 6px 14px rgba(67,197,158,.35)}
+  .sleep-btn.pm.on{background:linear-gradient(135deg,#7ea2f2,#a88cf0);border-color:transparent;color:#fff;box-shadow:0 6px 14px rgba(126,162,242,.35)}
+
   /* ---------- AI 工具舱 ---------- */
   .ai-group{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.5px;margin:4px 0 8px}
   .ai-group+.ai-grid{margin-bottom:14px}
@@ -934,6 +943,21 @@
             </div>
             <div class="sleep-tip">点击小格子可以补卡 / 取消任意一天</div>
           </div>
+
+          <!-- 用药打卡 -->
+          <div class="card c-med">
+            <div class="card-head">
+              <div class="card-title"><i class="dot"></i>用药打卡</div>
+              <div class="card-sub" id="medStat">—</div>
+            </div>
+            <div class="sleep-week" id="medWeek"></div>
+            <div class="sleep-legend"><span>☀️ 早上 · 早餐后</span><span>🌙 晚上 · 睡前</span></div>
+            <div class="sleep-actions">
+              <button class="sleep-btn am" id="medAm">💊 早上已吃药</button>
+              <button class="sleep-btn pm" id="medPm">💊 晚上已吃药</button>
+            </div>
+            <div class="sleep-tip">点击小格子可以补卡 / 取消任意一天</div>
+          </div>
         </div>
 
         <div class="pg-col">
@@ -1083,7 +1107,7 @@
   function blank(){
     return { version:3, _updatedAt:0, habits:[], todos:[], checkins:{}, notes:"",
              readings:[], countdowns:[], acad:[], focus:{}, hot:{},
-             sleep:{}, kf:{url:"", checks:{}}, createdAt:Date.now() };
+             sleep:{}, med:{}, kf:{url:"", checks:{}}, createdAt:Date.now() };
   }
   function normKf(kf){
     var out = { url:"", checks:{} };
@@ -1111,6 +1135,7 @@
         s.focus    = (d.focus && typeof d.focus === "object") ? d.focus : {};
         s.hot      = (d.hot && typeof d.hot === "object") ? d.hot : {};
         s.sleep    = (d.sleep && typeof d.sleep === "object") ? d.sleep : {};
+        s.med      = (d.med && typeof d.med === "object") ? d.med : {};
         s.kf       = normKf(d.kf);
       }
       return s;
@@ -1565,6 +1590,44 @@
     save(); renderSleep();
   }
 
+  /* ---------------- 用药打卡 ---------------- */
+  function renderMed(){
+    var box = $("medWeek");
+    var today = todayKey();
+    var html = "";
+    for(var i=6;i>=0;i--){
+      var k = shift(today, -i);
+      var d = parseKey(k);
+      var s = state.med[k] || {};
+      html += '<div class="sl-col">'+
+        '<span class="sl-lb'+(k===today?" today":"")+'">'+WD[d.getDay()].slice(1)+'</span>'+
+        '<button class="sl-cell am'+(s.am?" on":"")+'" data-d="'+k+'" data-kind="am" title="'+label(k)+' 早药">💊</button>'+
+        '<button class="sl-cell pm'+(s.pm?" on":"")+'" data-d="'+k+'" data-kind="pm" title="'+label(k)+' 晚药">💊</button>'+
+      '</div>';
+    }
+    box.innerHTML = html;
+
+    var a = 0, p = 0;
+    for(var j=0;j<7;j++){
+      var ss = state.med[shift(today, -j)];
+      if(ss){ if(ss.am) a++; if(ss.pm) p++; }
+    }
+    $("medStat").textContent = "本周早药 " + a + "/7 · 晚药 " + p + "/7";
+
+    var ts = state.med[today] || {};
+    $("medAm").classList.toggle("on", !!ts.am);
+    $("medAm").textContent = ts.am ? "☀️ 早药已打卡 ✓" : "💊 早上已吃药";
+    $("medPm").classList.toggle("on", !!ts.pm);
+    $("medPm").textContent = ts.pm ? "🌙 晚药已打卡 ✓" : "💊 晚上已吃药";
+  }
+  function toggleMed(k, kind){
+    if(!state.med[k]) state.med[k] = {};
+    state.med[k][kind] = !state.med[k][kind];
+    if(!state.med[k].am && !state.med[k].pm) delete state.med[k];
+    else if(state.med[k][kind]) vibrate(12);
+    save(); renderMed();
+  }
+
   /* ---------------- 专注计时 ---------------- */
   var POMO_BREAK = 5 * 60;
   var timer = {
@@ -1803,6 +1866,7 @@
     renderAcad();
     renderKf();
     renderSleep();
+    renderMed();
     renderFocusFoot();
     var p = rate(todayKey());
     if(p === 100 && lastPct !== -1 && lastPct < 100) celebrate();
@@ -2258,6 +2322,15 @@
     toggleSleep(c.getAttribute("data-d"), c.getAttribute("data-kind"));
   });
 
+  // 用药打卡
+  $("medAm").onclick = function(){ toggleMed(todayKey(), "am"); };
+  $("medPm").onclick = function(){ toggleMed(todayKey(), "pm"); };
+  $("medWeek").addEventListener("click", function(e){
+    var c = e.target.closest(".sl-cell");
+    if(!c) return;
+    toggleMed(c.getAttribute("data-d"), c.getAttribute("data-kind"));
+  });
+
   // 专注计时
   $("timerModes").addEventListener("click", function(e){
     var b = e.target.closest("[data-mode]");
@@ -2376,6 +2449,7 @@
         state.acad     = Array.isArray(d.acad) ? d.acad : [];
         state.focus    = (d.focus && typeof d.focus === "object") ? d.focus : {};
         state.sleep    = (d.sleep && typeof d.sleep === "object") ? d.sleep : {};
+        state.med      = (d.med && typeof d.med === "object") ? d.med : {};
         state.kf       = normKf(d.kf);
         state.hot      = {};
         save(true); render(); loadHot(true);
@@ -2390,7 +2464,8 @@
   function hasData(){
     return state.habits.length || state.todos.length || state.notes ||
            state.readings.length || state.countdowns.length || state.acad.length ||
-           Object.keys(state.sleep).length || Object.keys(state.kf.checks).length || state.kf.url;
+           Object.keys(state.sleep).length || Object.keys(state.med).length ||
+           Object.keys(state.kf.checks).length || state.kf.url;
   }
   $("resetBtn").onclick = function(){
     if(!hasData()){ toast("暂无数据"); return; }
